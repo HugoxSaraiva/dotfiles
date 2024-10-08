@@ -103,6 +103,10 @@ source $ZSH/oh-my-zsh.sh
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 source ~/.zsh_profile
 
+if [[ ! -n "$TMUX" ]]; then
+	tmux new -A -s main
+fi
+
 # # >>> conda initialize >>>
 # # !! Contents within this block are managed by 'conda init' !!
 # __conda_setup="$('/Users/hugo/opt/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
