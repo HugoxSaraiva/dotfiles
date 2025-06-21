@@ -1,17 +1,15 @@
 {
-  description = "Example Darwin system flake";
-  
+  description = "Example nix-darwin system flake";
+
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-24.11-darwin";
-    nix-darwin.url = "github:LnL7/nix-darwin/nix-darwin-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nix-darwin.url = "github:nix-darwin/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew"; 
   };
 
   outputs = inputs@{ self, nix-darwin, nixpkgs, nix-homebrew }:
   let
-    system = "aarch64-darwin";
-    pkgs = import nixpkgs { inherit system; };
     configuration = { pkgs, config, ... }: {
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
@@ -36,8 +34,6 @@
             doctl
             nodejs_22
             qmk
-            python312Packages.weasyprint
-            imagemagick
             act
             cppcheck
             bear
@@ -65,8 +61,8 @@
       };
 
       fonts.packages = [
-          (pkgs.nerdfonts.override { fonts = [ "JetBrainsMono"]; })
-        ];
+           pkgs.nerd-fonts.jetbrains-mono
+         ];
 
       system.activationScripts.applications.text = let
         env = pkgs.buildEnv {
@@ -95,6 +91,7 @@
         auth       sufficient     pam_tid.so
       '';
 
+      system.primaryUser = "hugo";
       system.defaults = {
           dock.autohide = false;
           loginwindow.GuestEnabled = false;
@@ -102,44 +99,31 @@
       };
 
       # Enables sudo with touch ID
-      security.pam.enableSudoTouchIdAuth = true;
+      security.pam.services.sudo_local.touchIdAuth = true;
 
-      # Auto upgrade nix package and the daemon service.
-      services.nix-daemon.enable = true;
-      nix.package = pkgs.nix;
-
-      # Necessary for using flakes on this system.
-      nix.settings.experimental-features = "nix-command flakes";
-
-      # Create /etc/zshrc that loads the nix-darwin environment.
-      programs.zsh.enable = true;  # default shell on catalina
+      # Enable alternative shell support in nix-darwin.
       # programs.fish.enable = true;
+      # Create /etc/zshrc that loads the nix-darwin environment.
+      programs.zsh.enable = true;
 
       # Set Git commit hash for darwin-version.
       system.configurationRevision = self.rev or self.dirtyRev or null;
 
       # Used for backwards compatibility, please read the changelog before changing.
       # $ darwin-rebuild changelog
-      system.stateVersion = 5;
+      system.stateVersion = 6;
 
       # The platform the configuration will be used on.
       nixpkgs.hostPlatform = "aarch64-darwin";
-
+      nix.enable = false;
     };
   in
   {
     # Build darwin flake using:
-    # $ darwin-rebuild build --flake .#MacBook-Pro
+    # $ darwin-rebuild build --flake .#simple
     darwinConfigurations."MacBook-Pro" = nix-darwin.lib.darwinSystem {
-      inherit system;
       modules = [ 
           configuration
-          {
-            environment.systemPackages = with pkgs; [
-              pkg-config
-              check
-            ];
-          }
           nix-homebrew.darwinModules.nix-homebrew
           {
             nix-homebrew = {
@@ -155,8 +139,5 @@
           }
         ];
     };
-
-    # Expose the package set, including overlays, for convenience.
-    darwinPackages = self.darwinConfigurations."MacBook-Pro".pkgs;
   };
 }
