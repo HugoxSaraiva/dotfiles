@@ -1,36 +1,60 @@
 {
   description = "Example Darwin system flake";
-
+  
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nix-darwin.url = "github:LnL7/nix-darwin";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-24.11-darwin";
+    nix-darwin.url = "github:LnL7/nix-darwin/nix-darwin-24.11";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
-    nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
+    nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew"; 
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, nix-homebrew}:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, nix-homebrew }:
   let
+    system = "aarch64-darwin";
+    pkgs = import nixpkgs { inherit system; };
     configuration = { pkgs, config, ... }: {
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
-      environment.systemPackages =
+      environment.systemPackages = with pkgs;
         [ 
-            pkgs.neofetch
-            pkgs.neovim
-            pkgs.tmux
-            pkgs.mkalias
-            pkgs.tldr
-            pkgs.fzf
-            pkgs.pam-reattach
+            neofetch
+            neovim
+            tmux
+            mkalias
+            tldr
+            fzf
+            pam-reattach
+            rustup
+            hugo
+            prettierd
+            ripgrep
+            sqlite
+            stow
+            iterm2
+            go
+            libiconv
+            doctl
+            nodejs_22
+            qmk
+            python312Packages.weasyprint
+            imagemagick
+            act
+            cppcheck
+            bear
+            pkg-config
+            check
         ];
 
       homebrew = {
           enable = true;
           brews = [
             "mas"
+            "lld"
+            "clang-format"
           ];
           casks = [
             "the-unarchiver"
+            "shortcat"
           ];
           masApps = {
             "Magnet" = 441258766;
@@ -57,7 +81,7 @@
           rm -rf /Applications/Nix\ Apps
           mkdir -p /Applications/Nix\ Apps
           find ${env}/Applications -maxdepth 1 -type l -exec readlink '{}' + |
-          while read src; do
+          while read -r src; do
             app_name=$(basename "$src")
             echo "copying $src" >&2
             ${pkgs.mkalias}/bin/mkalias "$src" "/Applications/Nix Apps/$app_name"
@@ -100,14 +124,22 @@
 
       # The platform the configuration will be used on.
       nixpkgs.hostPlatform = "aarch64-darwin";
+
     };
   in
   {
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#MacBook-Pro
     darwinConfigurations."MacBook-Pro" = nix-darwin.lib.darwinSystem {
+      inherit system;
       modules = [ 
           configuration
+          {
+            environment.systemPackages = with pkgs; [
+              pkg-config
+              check
+            ];
+          }
           nix-homebrew.darwinModules.nix-homebrew
           {
             nix-homebrew = {
