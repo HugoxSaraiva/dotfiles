@@ -139,5 +139,28 @@
           }
         ];
     };
+
+    legacyPackages."aarch64-darwin" = let
+        pkgs = import nixpkgs {
+          system = "aarch64-darwin";
+          config = { allowUnfree = true; };
+        };
+      in {
+        pkgs = pkgs;
+
+        # Shared package list
+        commonPackages = with pkgs; [
+          neofetch
+          neovim
+          tmux
+          mkalias
+          tldr
+          fzf
+          pam-reattach
+          prettierd
+          ripgrep
+          iterm2
+        ];
+      };
   };
 }
