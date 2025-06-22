@@ -20,7 +20,7 @@ nix run nixpkgs#stow -- -t "$HOME" -d "$DOTFILES_ROOT" .
 echo "Stowed files to $HOME"
 
 # Move nix darwin config files to expected folder since they can't be symlinks
-cp -r "$DOTFILES_ROOT/.config/nix-darwin" "$HOME/.config/nix-darwin"
+cp -rf "$DOTFILES_ROOT/.config/nix-darwin/" "$HOME/.config/nix-darwin/"
 
 # Activate nix darwin
 sudo nix run nix-darwin -- switch --flake ~/.config/nix-darwin

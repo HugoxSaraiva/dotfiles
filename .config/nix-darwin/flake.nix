@@ -3,13 +3,30 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
     nix-darwin.url = "github:nix-darwin/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
+
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew"; 
+
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, nix-homebrew }:
+  outputs = { 
+    self, 
+    nix-darwin, 
+    nixpkgs, 
+    nix-homebrew, 
+    home-manager,
+    ...
+    }@inputs:
   let
+    inherit (nix-darwin.lib) darwinSystem;
+    nixpkgsConfig = {
+        config.allowUnfree = true;
+    };
     configuration = { pkgs, config, ... }: {
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
@@ -22,15 +39,12 @@
             tldr
             fzf
             pam-reattach
-            rustup
             hugo
             prettierd
             ripgrep
             sqlite
             stow
             iterm2
-            go
-            libiconv
             doctl
             nodejs_22
             qmk
@@ -39,6 +53,7 @@
             bear
             pkg-config
             check
+            nix-direnv
         ];
 
       homebrew = {
@@ -119,31 +134,33 @@
     };
   in
   {
-    # Build darwin flake using:
-    # $ darwin-rebuild build --flake .#simple
-    darwinConfigurations."MacBook-Pro" = nix-darwin.lib.darwinSystem {
-      modules = [ 
-          configuration
-          nix-homebrew.darwinModules.nix-homebrew
-          {
-            nix-homebrew = {
-              # Install Homebrew under the default prefix
-              enable = true;
-
-              # Apple Silicon Only: Also install Homebrew under the default Intel prefix for Rosetta 2
-              enableRosetta = true;
-
-              # User owning the Homebrew prefix
-              user = "hugo";
-            };
-          }
-        ];
-    };
+    darwinConfigurations = {
+        MacBook-Pro = darwinSystem {
+            inherit inputs;
+            system = "aarch64-darwin";
+            modules = [ 
+              ./configuration.nix
+              configuration
+              home-manager.darwinModules.home-manager
+              nix-homebrew.darwinModules.nix-homebrew
+              {
+                nix-homebrew = {
+                  # Install Homebrew under the default prefix
+                  enable = true;
+                  # Apple Silicon Only: Also install Homebrew under the default Intel prefix for Rosetta 2
+                  enableRosetta = true;
+                  # User owning the Homebrew prefix
+                  user = "hugo";
+                };
+              }
+            ];
+          };
+      };
 
     legacyPackages."aarch64-darwin" = let
         pkgs = import nixpkgs {
           system = "aarch64-darwin";
-          config = { allowUnfree = true; };
+          config = nixpkgsConfig;
         };
       in {
         pkgs = pkgs;
